@@ -3,6 +3,7 @@
 > **Playlist:** CampusX GenAI / LangChain (21 videos)
 > **Notes ki language:** Hinglish (Roman script)
 > **Tag guide:** `Extra` = jo video mein nahi tha, revision ke liye mere taraf se add kiya hai
+> `⚠️ Correction` = video mein jo galat ya imprecise bola gaya, uska sahi version
 
 ---
 
@@ -95,6 +96,8 @@ Nitish sir ka framework: **Internet** (most successful) vs **Crypto/Blockchain**
 5. **Accessible hai?** Haan. Code nahi chahiye, English/Hindi mein baat karke use karo
 6. **Overall?** 6/6 yes, to GenAI **Internet wale rasta** pe hai
 
+> **⚠️ Correction:** Video mein 1 trillion dollar ko "lagbhag 80 lakh crore Rs" bola gaya hai. Current exchange rate (~₹85-87 per dollar) pe ye roughly **85 lakh crore Rs** banta hai. Chhoti si approximation ki baat hai, concept pe asar nahi.
+
 > **Extra:** DeepSeek R1 wala crash 27 Jan 2025 ko hua tha. Sirf Nvidia ka market cap ek din mein lagbhag $590 billion gira, jo US stock market history ka sabse bada single-company one-day loss tha.
 
 ---
@@ -186,6 +189,8 @@ Nitish sir ka framework: **Internet** (most successful) vs **Crypto/Blockchain**
 | 6 | **Evaluation** | Alag-alag metrics, LLM leaderboards kaise decide hote hain (e.g. DeepSeek R1 ne ChatGPT ko beat kiya, ye kaise measure hua) |
 | 7 | **Deployment** | Model ko production mein daalna |
 
+> **⚠️ Correction:** Video mein bola gaya ki "aaj ka har foundation model Transformer pe based hai". Ye **LLMs ke liye sahi** hai, lekin **har foundation model ke liye nahi**. Image generation wale **Diffusion models** (jaise Stable Diffusion) originally **U-Net** architecture use karte hain (naye versions mein Transformer-based DiT bhi hai), aur **Mamba** jaise State Space Models bhi Transformer ke alternative hain. Isliye "zyadatar LLMs Transformer-based hain" kehna safe hai.
+
 > **Extra:** PEFT (Parameter-Efficient Fine-Tuning) ke famous techniques **LoRA** aur **QLoRA** hain. Poore model ke weights train karne ke bajaye sirf kuch chhote adapter weights train hote hain, isse compute aur memory bahut bachti hai.
 
 ---
@@ -199,6 +204,8 @@ Nitish sir ka framework: **Internet** (most successful) vs **Crypto/Blockchain**
 | 3 | **AI Agents** | Chatbot + Tools = Agent |
 | 4 | **LLMOps** | Evaluation, improvements, deployment aur technical handling ka umbrella term |
 | 5 | **Miscellaneous** | **Multimodal models** (audio/video input-output), **Diffusion models** (Stable Diffusion) |
+
+> **⚠️ Correction:** Module 1 samjhate waqt video mein do baar "closed source" bola gaya, jabki doosri baar matlab **open source** tha. Sahi version: **closed-source** LLMs (GPT, Claude, Gemini) → **API** se use hote hain; **open-source** LLMs (Llama, Mistral) → **Hugging Face / Ollama** se local ya apne server pe chalte hain.
 
 ### Chatbot vs AI Agent
 
