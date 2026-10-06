@@ -1,904 +1,609 @@
-# 03 — LangChain Models: Language Models, Chat Models & Embedding Models
+# Video 4: Prompts in LangChain (CampusX)
 
-> **Video:** [LangChain Playlist — Video 3 (Models)](https://www.youtube.com/watch?v=HdcLE8JuMrA&list=PLKnIA16_RmvaTbihpo4MtzVm4XOQa0ER0&index=5)
-> **Speaker:** Nitish (CampusX)
-> **Sources used:** auto-generated YouTube transcript (main) + author ke playlist notes (Models section, pages 22–32) + current docs check (Oct 2026)
-> **Language:** Hinglish (Roman script), technical terms English mein
+**Playlist:** Generative AI using LangChain (CampusX, Nitish)
+**Notes ki language:** Hinglish (Roman script)
 
-**Legend (notes mein ye blocks milenge):**
+**Tag guide:**
+- `Extra` = jo video mein nahi tha, revision ke liye add kiya hai
+- `⚠️ Correction` = video mein jo galat ya imprecise bola gaya, uska sahi version
+- `🔄 Update` = video purana hai, ab jo latest hai wo yahan likha hai
 
-| Block | Matlab |
-|---|---|
-| `Extra` | Speaker ne jo important cheez miss ki, wo yahan add hai |
-| `⚠️ Correction` | Speaker ne jo galat/imprecise bola, uska sahi version |
-| `🔄 Update` | Playlist purani hai (early 2025), to ab jo badal gaya uska latest version |
+> **Rule:** Ye notes revision ke liye hain, isliye sab kuch simple rakha hai. Har concept ke saath ek real-life example hai.
 
 ---
 
 ## Table of Contents
 
-1. [Recap + Models component kya hai?](#1-recap--models-component-kya-hai)
-2. [Plan of Action](#2-plan-of-action)
-3. [Language Models: LLMs vs Chat Models](#3-language-models-llms-vs-chat-models)
-4. [Project Setup](#4-project-setup)
-5. [Demo 1: LLM (OpenAI)](#5-demo-1-llm-openai)
-6. [Demo 2: Chat Models (OpenAI, Anthropic, Google)](#6-demo-2-chat-models-openai-anthropic-google)
-7. [Important Parameters: temperature & max tokens](#7-important-parameters-temperature--max-tokens)
-8. [Open Source Models: theory](#8-open-source-models-theory)
-9. [Demo 3: Open Source via HuggingFace Inference API](#9-demo-3-open-source-via-huggingface-inference-api)
-10. [Demo 4: Open Source Locally (HuggingFace Pipeline)](#10-demo-4-open-source-locally-huggingface-pipeline)
-11. [Embedding Models](#11-embedding-models)
-12. [Mini Project: Document Similarity App](#12-mini-project-document-similarity-app)
-13. [Key Takeaways](#13-key-takeaways)
-14. [Self-Test Questions](#14-self-test-questions)
+1. [Quick Overview](#1-quick-overview)
+2. [Pehle ek correction: Temperature](#2-pehle-ek-correction-temperature)
+3. [Prompt kya hota hai](#3-prompt-kya-hota-hai)
+4. [Static vs Dynamic Prompt](#4-static-vs-dynamic-prompt)
+5. [PromptTemplate](#5-prompttemplate)
+6. [Messages (Chatbot banate hue)](#6-messages-chatbot-banate-hue)
+7. [ChatPromptTemplate](#7-chatprompttemplate)
+8. [MessagesPlaceholder](#8-messagesplaceholder)
+9. [Poore video ka logical diagram](#9-poore-video-ka-logical-diagram)
+10. [Key Takeaways (Quick Revision)](#10-key-takeaways-quick-revision)
+11. [Self-Test Questions](#11-self-test-questions)
 
 ---
 
-## 1. Recap + Models component kya hai?
+## 1. Quick Overview
 
-**Ab tak (Video 1 & 2):**
+**Video ka goal:** LangChain ka **2nd component = Prompts** end-to-end samajhna.
 
-| Video | Topic |
+| Topic | Ek line mein |
 |---|---|
-| 1 | LangChain kya hai, kyun chahiye, kaun si applications ban sakti hain, alternatives |
-| 2 | LangChain ke Components: Models, Prompts, Chains, Indexes, Memory, Agents |
+| Temperature fix | Pichle video ki ek galti theek ki |
+| Prompt | LLM ko bheja gaya message |
+| Static vs Dynamic | User se poora prompt maangna vs template mein blanks bharna |
+| `PromptTemplate` | Single message ke liye dynamic prompt |
+| Messages | `SystemMessage`, `HumanMessage`, `AIMessage` |
+| `ChatPromptTemplate` | Messages ki list ke liye dynamic prompt |
+| `MessagesPlaceholder` | Purani chat history ko template mein "plug" karna |
 
-**Aaj ka video:** sirf **Models component**, poora in-depth + coding.
+**Pichli videos ka recap (short):**
+- Video 1: LangChain kya hai aur kyun chahiye
+- Video 2: 6 main components ka overview
+- Video 3: Models component (deep dive)
+- Video 4 (ye wali): Prompts
 
-### Models component = ek common interface
+---
 
-- Duniya mein bahut saare AI models hain (OpenAI, Anthropic, Google, open-source...).
-- Har company ka API **alag tarike se behave** karta hai → apna code har provider ke liye alag likhna padta.
-- LangChain ka Model component ek **uniform interface** deta hai, jisse kisi bhi model se same style mein baat kar sakte ho.
+## 2. Pehle ek correction: Temperature
 
-> **Author ke notes (definition):** Model Component abstracts the complexity of working directly with different LLMs, chat models and embedding models. Isse AI-generated text, similarity search ke liye embeddings, aur RAG apps banana easy ho jata hai.
+Pichle video mein temperature ke baare mein jo bola tha, usme ek chhoti galti thi (ek student ne comment mein bataya).
 
-### Do tarah ke models
+**Temperature kya karta hai?** Ye decide karta hai ki **same input par LLM ka output kitna badlega.**
 
-```mermaid
-flowchart TD
-    M["Models (LangChain)"] --> LM["Language Models<br/>text in → text out"]
-    M --> EM["Embedding Models<br/>text in → numbers (vector) out"]
-    LM --> LLM["LLMs<br/>(old, general purpose)"]
-    LM --> CM["Chat Models<br/>(new, conversation)"]
-    CM --> CS["Closed Source<br/>(OpenAI, Claude, Gemini)"]
-    CM --> OS["Open Source<br/>(HuggingFace)"]
-    EM --> EO["OpenAI Embeddings"]
-    EM --> EH["HuggingFace Embeddings"]
-```
-
-| | Language Models | Embedding Models |
+| Temperature | Behaviour | Kab use karein |
 |---|---|---|
-| Input | Text | Text |
-| Output | **Text** | **Series of numbers (vector / embedding)** |
-| Use | Chatbot jaisi applications | **Semantic search** → RAG apps |
-| Example | "Capital of India?" → "New Delhi" | "Capital of India?" → `[0.12, -0.55, ...]` |
+| `0` ke aas-paas | Same input = (lagbhag) har baar same output | Jahan consistency chahiye (facts, extraction) |
+| `1.5` ke aas-paas | Same input = har baar alag, creative output | Poems, brainstorming, creative writing |
 
-> **Extra:** Embedding = text ka *contextual meaning* represent karne wala vector. Same meaning wale texts ke vectors paas-paas hote hain, isiliye similarity search possible hai.
+**Real-life example:** Ek calculator vs ek kavi. Calculator (temp 0) `2+2` par hamesha `4` dega. Kavi (temp high) "cricket par poem likho" bolne par har baar alag poem likhega.
 
----
+**Video ka demo:** `ChatOpenAI` se "Write a five line poem on cricket" bola.
+- `temperature=0` → baar-baar run karne par same poem
+- `temperature=0.5` → thoda sa change
+- `temperature=1.5` → kaafi alag aur creative output
 
-## 2. Plan of Action
+> **⚠️ Correction:**
+> - Video mein bola gaya "temperature 0 to 2 hota hai" sirf **OpenAI** ke liye sahi hai. Anthropic jaise providers mein range `0 to 1` hai. Hamesha apne provider ki docs dekho.
+> - Temperature 0 par output **lagbhag** same hota hai, 100% guarantee nahi hoti.
 
-Video 100% coding-based hai:
-
-| Part | Kya karenge |
-|---|---|
-| **Part 1: Language Models** | LLM (OpenAI) → Chat Models: **closed source** (OpenAI GPT, Anthropic Claude, Google Gemini) → **open source** (HuggingFace: API + local) |
-| **Part 2: Embedding Models** | **Closed source** (OpenAI embeddings) → **Open source** (HuggingFace, local) |
-| **Mini project** | Document Similarity app (kaunsa document query se sabse zyada similar hai) |
-
-> **Extra:** Speaker ne chatbot app banane ka plan hataya, kyunki uske liye pehle **Prompts** padhna better hai → next video.
+> **🔄 Update:** OpenAI ke naye **GPT-5 reasoning models** mein `temperature` ki custom value support nahi hoti (sirf default `1`). Agar `0.2` jaisi value bhejoge to `400 Unsupported value` error aata hai. Temperature wali demos ke liye non-reasoning model use karo, ya GPT-5 par temperature parameter hata do.
 
 ---
 
-## 3. Language Models: LLMs vs Chat Models
+## 3. Prompt kya hota hai
 
-**Language Models** = AI models jo text input lete hain, process karte hain, aur text output dete hain. Inke 2 types hain: **LLMs** aur **Chat Models**.
+**Definition:** LLM ko jo bhi message tum bhejte ho, usse **Prompt** kehte hain.
 
-### 3.1 LLMs (base models)
-
-- **General-purpose** models: text generation, summarization, translation, code generation, Q&A, kuch bhi.
-- **Input: plain string → Output: plain string.**
-- Purane models hain. LangChain mein inka **support dheere-dheere khatam** ho raha hai; naye projects mein use karne ko **recommended nahi**.
-
-### 3.2 Chat Models (instruction-tuned)
-
-- **Conversation tasks** ke liye specialized.
-- **Input: sequence of messages → Output: chat messages.**
-- Pehle se **fine-tuned on chat datasets** (multi-user conversations).
-- Chatbots, agents, coding assistants, customer support, AI tutors, sab inse bante hain.
-
-### 3.3 Comparison table
-
-| Feature | LLMs (Base Models) | Chat Models (Instruction-Tuned) |
-|---|---|---|
-| **Purpose** | Free-form text generation | Optimized for multi-turn conversations |
-| **Training data** | General text corpora (books, articles, Wikipedia) | General corpora **+ fine-tuned on chat datasets** (dialogues, user-assistant) |
-| **Memory & Context** | No built-in memory (pichli baat yaad nahi) | Structured **conversation history** support |
-| **Role awareness** | No `system` / `user` / `assistant` roles | Roles samajhte hain |
-| **Example models** | GPT-3, Llama-2-7B, Mistral-7B, OPT-1.3B | GPT-4, GPT-3.5-turbo, Llama-2-Chat, Mistral-Instruct, Claude |
-| **Use cases** | Text generation, summarization, translation, creative writing, code generation | Conversational AI, chatbots, virtual assistants, customer support, AI tutors |
-
-### 3.4 Role awareness kya hai?
-
-Chat model ko tum ek **role** de sakte ho, e.g. *"You are a highly qualified doctor. Tell me about this disease."* Ye ek **system-level message** hai. Model ko pata hota hai ki **kaun system hai, kaun user, kaun AI**.
-
-### 3.5 Technical difference (LangChain ke andar)
-
-| Class | Inherits from |
-|---|---|
-| `OpenAI` (LLM) | `BaseOpenAI` → `BaseLLM` |
-| `ChatOpenAI` (Chat Model) | `BaseChatOpenAI` → `BaseChatModel` |
-
-Sab LLMs `BaseLLM` se aur sab chat models `BaseChatModel` se inherit karte hain. (Speaker ne bola: ye thoda technical hai, na pata ho to bhi chalega.)
-
-> **Extra:** Chat models ka input "messages" ka list hota hai, jinke 3 main types hain:
-> - `SystemMessage`: AI ko role / instructions dena
-> - `HumanMessage`: user ka message
-> - `AIMessage`: model ka reply
->
-> Ye aage Prompts / Memory ke videos mein detail mein aayega.
-
-> **🔄 Update:** LangChain **v1.x** mein chat models hi default hain. Purani legacy cheezein (old chains, LLM-style APIs) ab **`langchain-classic`** package mein shift ho gayi hain, jo official docs ke hisaab se **December 2026 tak sirf security fixes** ke liye maintain hoga. Naye code mein chat models hi use karo. Saath hi ek unified helper aaya hai:
->
-> ```python
-> from langchain.chat_models import init_chat_model
->
-> model = init_chat_model("openai:gpt-4.1", temperature=0)
-> # provider switch karna: sirf string badlo, e.g. "anthropic:<model-id>"
-> ```
->
-> (Isse model/provider badalna aur easy ho jata hai. Video ke explicit classes `ChatOpenAI`, `ChatAnthropic`, etc. abhi bhi valid hain.)
-
-### 3.5.1 Kab kya use karein?
-
-| Tum kya bana rahe ho | Use karo |
-|---|---|
-| Text generation, summarizer, translation, code generation | LLM (theoretically) → **practically chat model hi use karo** |
-| Chatbot, virtual assistant, customer support bot, AI tutor, agents | **Chat Model** |
-
----
-
-## 4. Project Setup
-
-### 4.1 Steps
-
-```bash
-# 1) Folder banao (e.g. langchain-models) aur VS Code mein open karo
-
-# 2) Virtual environment banao
-python -m venv venv
-
-# 3) Activate karo
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Mac / Linux
-
-# 4) requirements.txt banao (libraries ki list) aur install karo
-pip install -r requirements.txt
-
-# 5) Test: LangChain install hua ya nahi
-python test.py
-```
-
-`test.py`:
+Pichle video mein bhi tumne prompts use kiye the (jaise `"Write a five line poem on cricket"`), bas "prompt" word use nahi hua tha.
 
 ```python
-import langchain
-print(langchain.__version__)
+model.invoke("Write a five line poem on cricket")   # ye string hi prompt hai
 ```
 
-### 4.2 Libraries jo is video mein use hui
+### Prompts 2 type ke hote hain
 
-> **Extra:** `requirements.txt` ka exact content transcript mein nahi aaya. Video ke code ke hisaab se in packages ki zarurat padti hai:
-
-| Package | Kaam |
-|---|---|
-| `langchain` | Core framework |
-| `langchain-openai` | OpenAI integration (`OpenAI`, `ChatOpenAI`, `OpenAIEmbeddings`) |
-| `langchain-anthropic` | Claude integration (`ChatAnthropic`) |
-| `langchain-google-genai` | Gemini integration (`ChatGoogleGenerativeAI`) |
-| `langchain-huggingface` | HuggingFace integration (`ChatHuggingFace`, `HuggingFaceEndpoint`, `HuggingFacePipeline`, `HuggingFaceEmbeddings`) |
-| `python-dotenv` | `.env` se secret keys load karna |
-| `scikit-learn`, `numpy` | Cosine similarity (mini project) |
-| `transformers`, `torch`, `sentence-transformers` | Local HuggingFace models chalane ke liye |
-
-### 4.3 Folder structure
-
-```
-langchain-models/
-├── .env                  # secret API keys (kabhi GitHub pe push mat karo)
-├── requirements.txt
-├── test.py
-├── LLMs/
-│   └── llm_demo.py
-├── ChatModels/
-│   ├── chatmodel_openai.py
-│   ├── chatmodel_anthropic.py
-│   ├── chatmodel_google.py
-│   ├── chatmodel_hf_api.py
-│   └── chatmodel_hf_local.py
-└── EmbeddedModels/
-    ├── embedding_openai_query.py
-    ├── embedding_openai_docs.py
-    ├── embedding_hf_local.py
-    └── document_similarity.py
-```
-
-> **Extra:** Ye bhi important: `.gitignore` mein `.env` aur `venv/` add karo. Agar API key galti se GitHub pe chali jaye to us key ko turant **revoke/regenerate** karo.
-
-### 4.4 API keys aur `.env` file
-
-Closed-source models ke liye provider se **API key** leni padti hai aur `.env` mein rakhte hain (code mein direct nahi likhte).
-
-```env
-OPENAI_API_KEY="sk-..."
-ANTHROPIC_API_KEY="..."
-GOOGLE_API_KEY="..."
-HUGGINGFACEHUB_API_TOKEN="hf_..."
-```
-
-> **Important (speaker ne bola):** Variable ka **naam exactly wahi** rakho jo library expect karti hai. Naam badla to `load_dotenv()` key locate nahi karega aur code fail ho jayega.
-
-| Provider | Key kahan se milegi | Env variable |
+| Type | Matlab | Example |
 |---|---|---|
-| OpenAI | `platform.openai.com` → Settings → API keys | `OPENAI_API_KEY` |
-| Anthropic | Anthropic Console → Get API keys | `ANTHROPIC_API_KEY` |
-| Google (Gemini) | Google AI Studio → Get a Gemini API key | `GOOGLE_API_KEY` |
-| HuggingFace | Account → Access Tokens → Create new token (**Read** access) | `HUGGINGFACEHUB_API_TOKEN` |
+| **Text-based** | Sirf text bhejte ho | "Capital of India batao" |
+| **Multimodal** | Image, audio ya video bhejte ho | Image upload karke sawaal poochna, gaana upload karke singer poochna |
 
-> **Extra:** Transcript mein Google aur HuggingFace ke variable names garbled aaye hain; upar wale naam LangChain ke standard defaults hain. HuggingFace ke liye `HF_TOKEN` bhi commonly kaam karta hai (`huggingface_hub` ke through).
+- Is video ka focus **text-based prompts** par hai, kyunki ~99% kaam abhi text se hota hai.
+- Prompt mein thoda sa change bhi output ko bahut badal sakta hai. Isiliye prompt banana ek skill hai, aur isi se **Prompt Engineering** ka job profile bana hai (Nitish iski alag playlist banane ka plan bata rahe hain: few-shot, chain-of-thought wagairah).
 
-> **Speaker ka note (pricing):** OpenAI ab free credits nahi deta; API use karne ke liye **minimum credit recharge** chahiye (speaker ne ~$5 recharge kiya, kaafi bataya). Anthropic bhi paid hai. Zyada kharch nahi karna ho to bas video dekho, ya HuggingFace / local wale demos follow karo.
->
-> **Speaker ki reason:** Companies mein abhi bhi mostly OpenAI APIs chalti hain, isliye practice ke liye try karna useful hai.
+**Real-life example:** Tum kisi dukaan mein "ek chai dena" bolo ya "ek kadak, kam cheeni wali chai dena" bolo, dono ka result alag hoga. Prompt wahi "order" hai.
 
 ---
 
-## 5. Demo 1: LLM (OpenAI)
+## 4. Static vs Dynamic Prompt
 
-**Flow:** libraries import → `load_dotenv()` → `OpenAI(model=...)` object → `.invoke(prompt)` → print result.
+### 4.1 Static prompt (user khud poora prompt likhe)
+
+Video mein ek **Research Assistant tool** banaya (Streamlit se):
+User ek text box mein khud prompt likhta hai, jaise `"Summarize Attention Is All You Need paper in simple fashion"`, aur button dabata hai.
 
 ```python
-from langchain_openai import OpenAI
+import streamlit as st
+from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
-load_dotenv()  # .env se OPENAI_API_KEY load hota hai
+load_dotenv()
+model = ChatOpenAI()   # 🔄 model ka naam explicitly dena better hai
 
-llm = OpenAI(model="gpt-3.5-turbo-instruct")
+st.header('Research Tool')
+user_input = st.text_input('Enter your prompt')
 
-result = llm.invoke("What is the capital of India")
-print(result)
+if st.button('Summarize'):
+    result = model.invoke(user_input)
+    st.write(result.content)      # print() nahi, st.write() se website par dikhta hai
 ```
 
-**Output:** `The capital of India is New Delhi.` (plain string)
+Chalane ka command: `streamlit run prompt_ui.py`
 
-| Step | Code | Kaam |
-|---|---|---|
-| 1 | `from langchain_openai import OpenAI` | LangChain ↔ OpenAI integration package se class import |
-| 2 | `load_dotenv()` | `.env` file se secrets current environment mein load |
-| 3 | `OpenAI(model=...)` | LLM object, batao kaunse model se baat karni hai |
-| 4 | `llm.invoke(prompt)` | Prompt model ko bhejta hai, reply laata hai |
+**Static prompt ki problems:**
 
-> **`invoke()` kyun important hai:** LangChain ke almost saare core components (models, prompts, chains) mein ye method hota hai. Iski backstory **Runnable interface** ke video mein aayegi.
+| Problem | Example |
+|---|---|
+| User ko bahut zyada control mil jaata hai | User galat paper ka naam daal de to LLM **hallucinate** kar sakta hai |
+| Output prompt par bahut sensitive hai | "5 lines" ki jagah user "math heavy" ya "code heavy" likh de to output poora badal jaata hai |
+| Consistent experience nahi milta | Tumhara tool shayad "achhi analogy dene" ke liye famous ho, par user ka prompt ye guarantee nahi karta |
 
-**Observation:** LLM ko **string** bheji, **string** hi wapas mili → ye confirm karta hai ki ye LLM hai.
+> Isiliye static prompts real apps mein **kam use** hote hain.
 
-> **🔄 Update:** `gpt-3.5-turbo-instruct` ek legacy completion-style model hai. Is style ki zarurat ab practically nahi; Chat Model approach (next section) use karo. Latest OpenAI model IDs ke liye OpenAI ka Models page dekho.
+### 4.2 Dynamic prompt (template + blanks)
+
+**Solution:** Ek **template** pehle se tum banao, aur user se sirf **blanks ki values** lo (dropdown se).
+
+**Real-life example:** Ye bilkul **Google Form** jaisa hai. Form (template) tumne banaya, user sirf apne answers bharta hai. Wo form ka structure nahi bigaad sakta.
+
+Template ka idea (research summary ke liye):
+
+```text
+Please summarize the research paper titled "{paper_input}" with the following specifications:
+Explanation Style: {style_input}
+Explanation Length: {length_input}
+1. Mathematical Details:
+   - Include relevant mathematical equations if present in the paper.
+   - Explain the mathematical concepts using simple, intuitive code snippets where applicable.
+2. Analogies:
+   - Use relatable analogies to simplify complex ideas.
+If certain information is not available in the paper, respond with:
+"Insufficient information available" instead of guessing.
+Ensure the summary is clear, accurate, and aligned with the provided style and length.
+```
+
+User se **3 dropdowns** (`st.selectbox`) liye:
+
+| Variable | Options |
+|---|---|
+| `paper_input` | Attention Is All You Need, BERT, GPT-3, Diffusion Models Beat GANs... |
+| `style_input` | Beginner-Friendly, Technical, Code-Oriented, Mathematical |
+| `length_input` | Short (1-2 paragraphs), Medium (3-5 paragraphs), Long (detailed) |
+
+**Fayde:**
+- Dropdown hai, to **spelling mistake ka scope nahi** hai
+- Prompt ka main structure tumhare control mein hai
+- Ek hi template se koi bhi paper, koi bhi style, koi bhi length
+
+> **Extra:** "Insufficient information available" wali line ek achhi practice hai. Isse LLM ko guess karne ki jagah mana kiya jaata hai (hallucination kam hota hai).
 
 ---
 
-## 6. Demo 2: Chat Models (OpenAI, Anthropic, Google)
+## 5. PromptTemplate
 
-LangChain ka interface **consistent** hai: LLM wale code mein bahut kam changes se chat model ban jata hai.
+**Definition:** `PromptTemplate` ek aisa prompt hai jisme **placeholders** `{...}` hote hain, jinhe runtime par values se bharte hain.
 
-### 6.1 ChatOpenAI
+### 5.1 Code
+
+```python
+from langchain_core.prompts import PromptTemplate
+
+template = PromptTemplate(
+    template="""Please summarize the research paper titled "{paper_input}" ...
+Explanation Style: {style_input}
+Explanation Length: {length_input}
+...""",
+    input_variables=['paper_input', 'style_input', 'length_input'],
+    validate_template=True,
+)
+
+prompt = template.invoke({
+    'paper_input': paper_input,
+    'style_input': style_input,
+    'length_input': length_input,
+})
+
+result = model.invoke(prompt)
+st.write(result.content)
+```
+
+**Flow:**
+
+```text
+User dropdowns  -->  PromptTemplate.invoke({...})  -->  Filled Prompt  -->  model.invoke()  -->  Result
+```
+
+> **🔄 Update:** Ab `PromptTemplate.from_template("...{x}...")` use karna aasaan hai. Isme `input_variables` **apne aap infer** ho jaate hain, manually likhne ki zarurat nahi.
+
+### 5.2 f-string se kyun nahi? (Video ka important doubt)
+
+Sach: ye poora kaam f-string se bhi ho sakta hai. Phir bhi `PromptTemplate` ke **3 strong reasons** hain:
+
+| # | Reason | Matlab | Real-life example |
+|---|---|---|---|
+| 1 | **Default validation** | Placeholder miss ya extra ho to **development time par hi error** aa jaata hai, server par chalte waqt nahi | Form submit hone se pehle hi "ye field bhari nahi" ka red warning |
+| 2 | **Reusability** | Template ko alag file (JSON) mein save karke kahin bhi load kar sakte ho | Ek printed form ka master copy, jisse sab departments photocopy karte hain |
+| 3 | **LangChain ecosystem se tight integration** | Chains mein seedha use hota hai (f-string chain mein nahi daal sakte) | Ek hi brand ke charger aur phone, seedha fit ho jaate hain |
+
+**Reason 1 ka demo (validation):**
+- `input_variables` mein `length_input` daalna bhool gaye → error: "placeholder nahi mila"
+- Ya extra variable (`name`) daal diya jo template mein nahi hai → error: "extra variable"
+- Ye error **`validate_template=True`** hone par aata hai.
+
+> **⚠️ Correction:** Video mein bola gaya "validation by default mil jaata hai". Ye sahi tareeke se **version par depend** karta hai (`validate_template` ka default alag versions mein alag raha hai). Safe rasta: jab validation chahiye, `validate_template=True` **explicitly** likho, jaisa video ke code mein bhi kiya gaya hai.
+
+**Reason 2 ka demo (reuse via JSON):**
+
+```python
+# prompt_generator.py (sirf ek baar chalao)
+template.save('template.json')
+```
+
+```python
+# main app mein
+from langchain_core.prompts import load_prompt
+template = load_prompt('template.json')
+```
+
+Ab app ki file mein bada template likhna nahi padta, aur koi bhi doosri file `template.json` load kar sakti hai.
+
+> **🔄 Update (important):** `load_prompt`, `load_prompt_from_config` aur `.save()` ab **deprecated** hain (2.0.0 mein hata diye jaayenge). Inme ek **path traversal vulnerability** (CVE-2026-34070) mili thi, jo `langchain-core >= 1.2.22` mein fix hui hai. Naye kaam ke liye `langchain_core.load` ke `dumps/loads` use karo, ya template ko apni khud ki file/Python module mein rakho. Agar `load_prompt` use kar bhi rahe ho to **kabhi bhi user ki di hui file path/config mat load karo**.
+
+**Reason 3 ka demo (chain):**
+
+```python
+# Pehle: do baar invoke
+prompt = template.invoke({...})
+result = model.invoke(prompt)
+
+# Chain ke saath: sirf ek baar invoke
+chain = template | model
+result = chain.invoke({
+    'paper_input': paper_input,
+    'style_input': style_input,
+    'length_input': length_input,
+})
+st.write(result.content)
+```
+
+`template | model` ek **chain** hai. Chains aage ki video mein detail se aayenge.
+
+> **Extra:** `|` operator LCEL (LangChain Expression Language) ka hissa hai. Ye isliye chalta hai kyunki `PromptTemplate` aur models dono **Runnables** hain.
+
+---
+
+## 6. Messages (Chatbot banate hue)
+
+Ab ek chhota **console chatbot** banate hain (GUI nahi, sirf terminal).
+
+### 6.1 Version 1: Simple chatbot (aur uski problem)
 
 ```python
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
+model = ChatOpenAI()
 
-model = ChatOpenAI(model="gpt-4")   # temperature=..., max_completion_tokens=... bhi de sakte ho
-
-result = model.invoke("What is the capital of India")
-print(result.content)
+while True:
+    user_input = input('You: ')
+    if user_input == 'exit':
+        break
+    result = model.invoke(user_input)
+    print('AI:', result.content)
 ```
 
-**Difference from LLM:**
+- Yahan `PromptTemplate` use nahi kiya, kyunki kuch dynamic nahi hai. User jo likhe wahi bhej do (ye static prompt hai).
 
-| | LLM (`OpenAI`) | Chat Model (`ChatOpenAI`) |
-|---|---|---|
-| Variable name (convention) | `llm` | `model` |
-| `invoke()` returns | Plain **string** | **AIMessage object** |
-| Answer kahan hai | Seedha result | `result.content` |
+**Problem (demo):**
+1. User: "Tell me which one is greater, 2 or 0"
+2. AI: "2"
+3. User: "Now multiply the bigger number by 10"
+4. AI: "Let's say the bigger number is x... 10x" ❌ (Sahi jawab `20` tha)
 
-Agar `print(result)` karo to `content` ke saath **metadata** bhi dikhta hai: prompt tokens, completion tokens, total tokens, model name, finish reason, etc. Sirf answer chahiye to `result.content`.
+**Kyun hua?** LLM ko **pichla context yaad nahi** hai. Har call independent hoti hai.
 
-> **Extra:** `AIMessage` mein common fields: `content` (answer), `response_metadata` (model name, finish reason, token usage), `usage_metadata` (input/output/total tokens), `id`. Token usage se tum cost track kar sakte ho.
+> **Extra:** Ise kehte hain "**LLM API calls are stateless**". Model apne aap kuch yaad nahi rakhta, yaad rakhna tumhari app ki zimmedari hai.
 
-> **Extra (models list):** Kaun se OpenAI models available hain, unki **context window** aur **max output tokens** kya hain, ye OpenAI website ke Models section mein milta hai. Decision usi ke basis pe lete hain.
+**Real-life example:** Ek aisa dost jisko har 10 second baad sab kuch bhool jaata hai. Tum har baar poori baat dobara bataoge tabhi wo samjhega.
 
-### 6.2 ChatAnthropic (Claude)
+### 6.2 Version 2: Chat history ki list
 
-Process same hai. **Claude** ko kai jagah GPT ke barabar ya better bataya jata hai, aur company (Anthropic) ke API bhi industry mein use hote hain.
+**Fix:** `chat_history = []` banao. Har user message aur har AI reply us list mein daalo, aur LLM ko **poori list** bhejo.
 
 ```python
-from langchain_anthropic import ChatAnthropic
-from dotenv import load_dotenv
+chat_history = []
 
-load_dotenv()
+while True:
+    user_input = input('You: ')
+    chat_history.append(user_input)
+    if user_input == 'exit':
+        break
+    result = model.invoke(chat_history)       # invoke list bhi le leta hai
+    chat_history.append(result.content)
+    print('AI:', result.content)
 
-model = ChatAnthropic(model="<claude-model-id>")  # video mein Claude 3.5 wala model use hua
-
-result = model.invoke("What is the capital of India")
-print(result.content)
+print(chat_history)
 ```
 
-| Step | Kya badla (OpenAI se) |
-|---|---|
-| Import | `ChatAnthropic` from `langchain_anthropic` |
-| Key | `ANTHROPIC_API_KEY` (exact naam) |
-| Model | Anthropic docs ke Models page se pick karo |
+Ab "multiply the bigger number by 10" sahi se `2 x 10 = 20` bata deta hai.
 
-> **🔄 Update:** Video mein Claude 3.5 generation use hui thi (ab purani). Current naam ke liye Anthropic docs ka model page dekho; e.g. Sonnet-tier ke liye ab `claude-sonnet-5-5` jaise IDs hain:
->
-> ```python
-> model = ChatAnthropic(model="claude-sonnet-5-5")
-> ```
+**Nayi problem:** List mein sab messages sirf strings hain. **Kisne kya bola, ye pata nahi chalta.**
 
-### 6.3 ChatGoogleGenerativeAI (Gemini)
-
-```python
-from langchain_google_genai import ChatGoogleGenerativeAI
-from dotenv import load_dotenv
-
-load_dotenv()
-
-model = ChatGoogleGenerativeAI(model="gemini-1.5-pro")
-
-result = model.invoke("What is the capital of India")
-print(result.content)
+```text
+['hi', 'Hello, how can I assist you today?', 'tell me which is greater...', ...]
+# Ye "Hello how can I assist" user ne bola ya AI ne? Pata nahi!
 ```
 
-Key: Google AI Studio se **Gemini API key** → `.env` mein (`GOOGLE_API_KEY`).
+Chat jitni lambi hogi, LLM ke liye utna confusing hoga.
 
-> **🔄 Update:** `gemini-1.5-pro` ab **retire** ho chuka hai (Google ke docs ke hisaab se Sept 2025 mein; us ID par call karne par error aata hai). Isko replace karo current Gemini model se, e.g. `gemini-2.5-pro` ya jo latest stable ho. Google ka official model lifecycle page check karo, kyunki 2.5 series ki retirement bhi announce hone ki reports hain.
->
-> Saath hi `langchain-google-genai` ka major version bada hai (v4.x), to old code chalate waqt migration notes dekh lo.
+**Real-life example:** WhatsApp ka ek aisa chat export jisme **naam hata diye gaye hon**. Sirf messages dikh rahe hain, kisne bheja pata nahi.
 
-### 6.4 Main takeaway (LangChain ki power)
+### 6.3 Solution: Labeled messages (3 types)
 
-Teeno providers ke liye **almost identical code**:
+LangChain mein **exactly 3 message types** hote hain:
 
-```python
-model = <ProviderChatClass>(model="<model-name>")
-result = model.invoke("...")
-print(result.content)
-```
-
-Bas **class, API key aur model name** badalte hain. Yahi LangChain ka **Model Agnostic** fayda hai.
-
----
-
-## 7. Important Parameters: `temperature` & max tokens
-
-### 7.1 `temperature`
-
-- Model ke output ki **randomness / creativity** control karta hai.
-- **Low** → zyada **deterministic & predictable**.
-- **High** → zyada **random, creative, diverse**.
-
-| Use case | Suggested temperature |
-|---|---|
-| Factual answers: math, code | **0 – 0.3** |
-| General Q&A, explanations | **~0.5 – 0.7** |
-| Creative: writing, story-telling, jokes | **~0.9 – 1.2** |
-| Very random: brainstorming | **1.5+** |
-
-```python
-model = ChatOpenAI(model="gpt-4", temperature=1.5)
-```
-
-**Speaker ka experiment:**
-
-| Prompt | Temperature | Observation |
-|---|---|---|
-| "Suggest me 5 Indian male names" | 0 vs 1.8 | Almost koi khaas fark nahi (prompt sahi nahi tha) |
-| "Write a 5 line poem on cricket" | 0 vs 1.5 | Poem alag aayi, par speaker khud quality judge nahi kar paaye |
-
-**Rule of thumb:** deterministic tasks (code generation) → **0 ki taraf**; creative tasks (story, poem, jokes) → **zyada** value.
-
-> **⚠️ Correction (author ke notes ka "A mistake from my side!" page):** Author ne apne notes mein temperature ke liye explicitly **`0 → 2`** likha hai. Matlab OpenAI-style temperature range **0 se 2** tak hai (video mein "1.5+" ko extreme maana gaya tha, par range 2 tak jaati hai).
->
-> **Extra (provider-wise range, jo speaker ne nahi bataya):** ye provider par depend karta hai. OpenAI aur Gemini mein generally **0–2**, Anthropic (Claude) mein **0–1**. Koi bhi value dene se pehle us provider ke docs dekho.
-
-> **Extra:** `temperature=0` ka matlab "mostly" deterministic hai, 100% guarantee nahi.
-
-> **🔄 Update:** Kuch naye **reasoning models** mein `temperature` customize karne ki permission nahi hoti (fixed default). Agar error aaye to provider docs check karo.
-
-### 7.2 `max_completion_tokens` (output length limit)
-
-- Batata hai ki response mein **maximum kitne tokens** chahiye.
-- **Kyun useful:** paid APIs mein **per token** pay karna padta hai, isliye developer output ko restrict kar sakta hai.
-
-```python
-model = ChatOpenAI(model="gpt-4", temperature=1.5, max_completion_tokens=10)
-```
-
-Isse response mein **maximum 10 tokens** aaye (speaker ne demo mein sirf 10 tokens wala output dikhaya).
-
-**Token ≈ word?** Roughly samajh sakte ho, par exact nahi. Tokenization ek bada topic hai, aage padhenge.
-
-> **Extra (pricing):** OpenAI ki pricing page par rate **per 1 million tokens** hota hai, aur **input tokens aur output tokens ka rate alag** hota hai. `usage_metadata` se tum apna kharcha estimate kar sakte ho.
-
-> **Extra (truncation):** `max_completion_tokens` chhota rakhoge to jawab **beech mein hi kat jayega** (model summarize nahi karta, bas rok deta hai). Metadata mein `finish_reason` `length` aata hai.
-
-> **Extra (parameter names provider-wise alag hote hain):**
->
-> | Provider / class | Max output parameter |
-> |---|---|
-> | `ChatOpenAI` | `max_completion_tokens` (video mein yehi use hua) |
-> | `ChatAnthropic` | `max_tokens` |
-> | HuggingFace pipeline | `max_new_tokens` |
->
-> Isliye jab provider badlo to parameter ka naam bhi check karo.
-
----
-
-## 8. Open Source Models: theory
-
-### 8.1 Closed-source ke 2 flaws
-
-Ab tak (GPT, Claude, Gemini) **closed-source / proprietary** the: model company ke server par rakha hai, API se access hota hai.
-
-1. **Paise dene padte hain** (per token).
-2. **Control nahi** hai: model kisi aur ke server par hai, tum change nahi kar sakte.
-
-### 8.2 Open source ka idea
-
-> **Open-source language models** = freely available AI models jinko **download, modify, fine-tune aur deploy** kar sakte ho bina central provider ki restriction ke.
-
-Koi company/organization model ko train karke internet par release kar deti hai → tum use **apni machine par download** karke jo chaho karo.
-
-### 8.3 Open vs Closed comparison
-
-| Feature | Open-Source Models | Closed-Source Models |
-|---|---|---|
-| **Cost** | Free (no API cost) | Paid, API usage per token |
-| **Control** | Modify, fine-tune, deploy anywhere | Locked to provider's infrastructure |
-| **Data Privacy** | Locally chalte hain, data kisi external server par nahi jaata | Queries provider ke servers par jaati hain |
-| **Customization** | Apne datasets par fine-tune | Fine-tuning mostly nahi (kuch providers limited dete hain) |
-| **Deployment** | On-premise servers ya cloud | Vendor ka API hi use karna padta hai |
-
-> **Privacy ka real fayda:** confidential documents ke saath LLM chalana ho (jahan data OpenAI ko bhejna allowed nahi) to open-source local model best hai.
-
-```mermaid
-flowchart LR
-    subgraph Closed["Closed Source"]
-        U1[Your App] -->|API + pay| S1[Provider Server<br/>model yahan hai]
-    end
-    subgraph Open["Open Source"]
-        I[Internet / HuggingFace] -->|download| U2[Your Machine<br/>model yahan hai]
-    end
-```
-
-### 8.4 Famous open-source models (author ke notes ke hisaab se)
-
-| Model | Developer | Parameters | Best use case |
+| Message type | Kaun bhejta hai | Kab use hota hai | Example |
 |---|---|---|---|
-| LLaMA-2 7B/13B/70B | Meta AI | 7B–70B | General-purpose text generation |
-| Mixtral-8x7B | Mistral AI | 8x7B (MoE) | Efficient & fast responses |
-| Mistral-7B | Mistral AI | 7B | Best small-scale model (LLaMA-2-13B se better) |
-| Falcon-7B/40B | TII UAE | 7B–40B | High-speed inference |
-| BLOOM-176B | BigScience | 176B | Multilingual text generation |
-| GPT-J-6B | EleutherAI | 6B | Lightweight & efficient |
-| GPT-NeoX-20B | EleutherAI | 20B | Large-scale applications |
-| StableLM | Stability AI | 3B–7B | Compact models for chatbots |
+| `SystemMessage` | Developer | Conversation ki **shuruaat mein**, AI ka role/instructions set karne ke liye | "You are a helpful assistant" / "You are a very knowledgeable doctor" |
+| `HumanMessage` | User | Jo user LLM ko bhejta hai | "Tell me the capital of India" |
+| `AIMessage` | LLM | Jo LLM wapas deta hai | "The capital of India is New Delhi" |
 
-> **🔄 Update:** Ye list 2025 ke early period ki hai. Aajkal popular open-weight families mein **Llama (3.x / 4)**, **Mistral**, **Qwen**, **DeepSeek**, **Gemma**, **gpt-oss** jaise models aate hain. Speaker ne video mein HuggingFace ke text-generation page par DeepSeek, Llama aur Qwen ka bhi zikr kiya tha. Latest ranking ke liye HuggingFace ka text-generation page dekho.
+**Real-life example:**
+- `SystemMessage` = naye employee ko **joining day par di gayi job description** ("tum customer support agent ho, politely baat karna")
+- `HumanMessage` = customer ka sawaal
+- `AIMessage` = employee ka jawab
 
-> **Extra (open-source vs open-weight):** Zyadatar "open-source" LLMs asal mein **open-weight** hote hain (weights download kar sakte ho, par training data / full code open nahi). Har model ka **license** alag hota hai (commercial use allowed hai ya nahi), isliye production se pehle license padho.
-
-### 8.5 Open-source models kahan milenge? → HuggingFace
-
-- **HuggingFace** = open-source AI models ki sabse badi repository (hazaaron models).
-- Models alag types ke: multimodal (audio/video/text/speech), computer vision (image classification, object detection), NLP (text generation, etc.).
-- Hum **Text Generation** models par kaam karenge.
-
-### 8.6 Open-source models use karne ke 2 tarike
-
-```mermaid
-flowchart TD
-    OS[Open-Source Models] --> A["1. HuggingFace Inference API<br/>(API key chahiye, free tier + limit ke baad paid)"]
-    OS --> B["2. Run Locally<br/>(model download, apni machine par)"]
-```
-
-| | Inference API | Local |
-|---|---|---|
-| Model kahan hai | HuggingFace ke servers par | Tumhari machine par |
-| Key | API token chahiye | Download ke liye (zarurat par) |
-| Cost | Free tier, limit ke baad paid | Free, par hardware chahiye |
-| Plus point | Hazaaron models, setup easy | Full control + privacy |
-
-### 8.7 Disadvantages
-
-| Disadvantage | Details |
-|---|---|
-| **High hardware requirements** | Bade models (e.g. LLaMA-2-70B) ke liye expensive GPUs chahiye |
-| **Setup complexity** | PyTorch, CUDA, transformers jaisi dependencies install karni padti hain |
-| **Lack of RLHF** | Zyadatar open models mein human feedback se fine-tuning kam hoti hai, isliye instruction-following thodi weak (responses kam refined) |
-| **Limited multimodal abilities** | Open models mein images/audio/video support kam (GPT-4V jaisa nahi) |
-
-> **🔄 Update:** Ye gap ab kaafi kam ho gaya hai. Aajkal ke bahut saare open-weight models **instruction-tuned / preference-tuned (RLHF, DPO jaise methods)** ke saath aate hain, aur kai open **multimodal (vision)** models bhi available hain. Hardware ka problem phir bhi real hai, par **quantized models** (GGUF/4-bit) aur tools jaise **Ollama** se chhoti machines par bhi chalana easier ho gaya hai.
-
----
-
-## 9. Demo 3: Open Source via HuggingFace Inference API
-
-Model **HuggingFace ke servers** par hai; hum API se baat karte hain (local download nahi).
-
-### 9.1 Setup
-
-1. HuggingFace account banao → **Settings → Access Tokens → Create new token** (type: **Read**).
-2. Token ko `.env` mein `HUGGINGFACEHUB_API_TOKEN` naam se save karo.
-
-### 9.2 Model choose karna
-
-Speaker ne **TinyLlama** liya: **1.1 billion parameters**, Llama ka chhota fine-tuned chat model.
-
-- Model ka **repo ID** HuggingFace page se copy karo, e.g. `TinyLlama/TinyLlama-1.1B-Chat-v1.0`.
-
-### 9.3 Code
+**Code (messages.py):**
 
 ```python
-from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
+model = ChatOpenAI()
 
-llm = HuggingFaceEndpoint(
-    repo_id="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    task="text-generation",
-)
-
-model = ChatHuggingFace(llm=llm)
-
-result = model.invoke("What is the capital of India")
-print(result.content)
-```
-
-| Piece | Kaam |
-|---|---|
-| `HuggingFaceEndpoint` | HF Inference API se connect karta hai (`repo_id` + `task`) |
-| `ChatHuggingFace(llm=llm)` | Us endpoint ko LangChain **chat model** interface mein wrap karta hai |
-| `repo_id` | HF par kaunsa model |
-| `task` | Kaunsa kaam (yahan `text-generation`) |
-
-> **🔄 Update:** HuggingFace ka serverless Inference API ab **"Inference Providers"** ke saath re-organise ho gaya hai, aur har model free serverless endpoint par available nahi hota. Agar tumhare chune hue model par error aaye, to model page par Inference Providers section dekho, koi aur supported model chuno, ya next demo jaisa **local** chalao.
-
----
-
-## 10. Demo 4: Open Source Locally (HuggingFace Pipeline)
-
-Ab model **apni machine par download** hoga aur wahin chalega. API key ki zarurat nahi, `HuggingFacePipeline` use hota hai.
-
-```python
-import os
-os.environ["HF_HOME"] = "D:/huggingface_cache"   # sirf agar C drive full hai (speaker ki machine ka issue)
-
-from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
-
-llm = HuggingFacePipeline.from_model_id(
-    model_id="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    task="text-generation",
-    pipeline_kwargs=dict(
-        temperature=0.5,
-        max_new_tokens=100,
-    ),
-)
-
-model = ChatHuggingFace(llm=llm)
-
-result = model.invoke("What is the capital of India")
-print(result.content)
-```
-
-| Piece | Meaning |
-|---|---|
-| `HuggingFacePipeline.from_model_id(...)` | Model + tokenizer + config **download** karke local pipeline banata hai |
-| `pipeline_kwargs` | Generation settings: `temperature`, `max_new_tokens` (yahan **100 tokens** limit) |
-| `HF_HOME` | Download/cache folder badalne ke liye (default mein C drive). **Tumhe zarurat nahi**, ye speaker ki limitation thi |
-
-### Speaker ka experience
-
-- **First run** par model aur tokenizer/config files **download** hoti hain, phir RAM mein load hoke chalta hai.
-- Speaker ki machine (**8 GB RAM**, kam SSD) par ye ~**10 minutes** laga, machine hang ho gayi, restart karna pada.
-- **Second run** mein download nahi hota; **cache** se load hota hai.
-- GPU ho to **inference fast**, CPU par slow.
-- Output nicely formatted aaya (user question + assistant answer).
-
-> **⚠️ Correction (size):** Speaker ne bola files ~300–500 MB hain (aur khud "if I remember correctly" kaha). **TinyLlama-1.1B ka main weights file aam taur par ~2 GB+** hota hai (1.1B params × 2 bytes ≈ 2.2 GB, fp16 mein). Isliye disk space aur RAM thoda zyada plan karo.
-
-> **Extra:** Is tarah se HuggingFace se **koi bhi model** (jo tumhare hardware par fit ho) utha ke local chala sakte ho. `ChatHuggingFace` model ka **chat template** apply karta hai, isliye role-based formatting ho jati hai.
-
-> **Extra (weak machine ke liye):** Bahut chhoti RAM par pehle chhote models (≤1–3B) try karo, ya **quantized** versions / **Ollama** use karo.
-
----
-
-## 11. Embedding Models
-
-> **Reminder:** Embedding model text ko **vector** mein convert karta hai, jisme us text ki **contextual understanding** hoti hai.
-
-### 11.1 OpenAI Embeddings: single query
-
-```python
-from langchain_openai import OpenAIEmbeddings
-from dotenv import load_dotenv
-
-load_dotenv()
-
-embedding = OpenAIEmbeddings(model="text-embedding-3-large", dimensions=32)
-
-result = embedding.embed_query("Delhi is the capital of India")
-print(str(result))
-```
-
-**Output:** ek **32-dimension vector** (numbers ki list).
-
-| Parameter | Matlab |
-|---|---|
-| `model` | Kaunsa embedding model (e.g. `text-embedding-3-large`) |
-| `dimensions` | Output vector kitne numbers ka ho |
-
-| Model | Default dimensions (docs ke hisaab se) |
-|---|---|
-| `text-embedding-3-small` | 1536 |
-| `text-embedding-3-large` | 3072 |
-
-- **Bada vector** → zyada contextual meaning capture; **chhota vector** → kam context capture.
-- Speaker ne demo mein 32 dimensions rakhe (output chhota dikhane ke liye).
-
-> **⚠️ Correction:** Speaker ne bola chhota vector use karne se "cost kam lagti hai". OpenAI embeddings ki billing **input tokens** ke hisaab se hoti hai, **`dimensions` badalne se API cost nahi badalti**. Chhote vector ke asli fayde: **kam storage** (vector database mein) aur **faster similarity search**.
-
-> **Extra:** `dimensions` parameter sirf **`text-embedding-3-*`** family mein supported hai, purane `text-embedding-ada-002` mein nahi.
-
-### 11.2 OpenAI Embeddings: multiple documents
-
-Ek saath multiple texts ke liye `embed_query` ki jagah **`embed_documents`**.
-
-```python
-documents = [
-    "Delhi is the capital of India",
-    "Kolkata is the capital of West Bengal",
-    "Paris is the capital of France",
+messages = [
+    SystemMessage(content='You are a helpful assistant'),
+    HumanMessage(content='Tell me about LangChain'),
 ]
 
-result = embedding.embed_documents(documents)
-print(str(result))
+result = model.invoke(messages)
+messages.append(AIMessage(content=result.content))
+
+print(messages)
 ```
 
-**Output:** **2D list**: andar **3 lists**, har list ek document ka embedding vector.
+Output mein 3 labeled messages dikhte hain (`SystemMessage`, `HumanMessage`, `AIMessage`), aur saath mein `additional_kwargs` aur `response_metadata` jaisi extra info bhi hoti hai.
 
-| Method | Input | Output |
+**Final chatbot (labeled history ke saath):**
+
+```python
+chat_history = [
+    SystemMessage(content='You are a helpful AI assistant')
+]
+
+while True:
+    user_input = input('You: ')
+    chat_history.append(HumanMessage(content=user_input))
+    if user_input == 'exit':
+        break
+    result = model.invoke(chat_history)
+    chat_history.append(AIMessage(content=result.content))
+    print('AI:', result.content)
+
+print(chat_history)
+```
+
+Ab chat kitni bhi lambi ho, LLM ko hamesha pata rehta hai kaun sa message kiska hai.
+
+> **🔄 Update:**
+> - LangChain v1 mein import ab `from langchain.messages import SystemMessage, HumanMessage, AIMessage` bhi chalta hai (ye `langchain-core` se re-export hota hai). Purana `langchain_core.messages` bhi chalta hai.
+> - Model banane ka naya unified tareeka: `from langchain.chat_models import init_chat_model`.
+> - Is video ki "manual chat_history list" ek **concept samajhne** ke liye achhi hai. Production mein memory ke liye ab **LangGraph checkpointer** (`InMemorySaver`, `SqliteSaver`, `PostgresSaver`) use hota hai. Purane `ConversationBufferMemory` jaise classes deprecated hain aur v1 mein `langchain-classic` mein chale gaye.
+> - Chat history bahut lambi ho jaaye to token limit aati hai. Iske liye `trim_messages` ya built-in **summarization middleware** use karo (v1).
+
+---
+
+## 7. ChatPromptTemplate
+
+**Kab chahiye?** Jab tum **messages ki list** bhej rahe ho aur **us list ke andar** dynamic placeholders chahiye.
+
+Example: System message mein domain dynamic ho, aur human message mein topic dynamic ho.
+
+```text
+System: "You are a helpful {domain} expert"
+Human : "Explain in simple terms, what is {topic}"
+```
+
+### 7.1 Sahi tareeka (tuples)
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+
+chat_template = ChatPromptTemplate([
+    ('system', 'You are a helpful {domain} expert'),
+    ('human', 'Explain in simple terms, what is {topic}'),
+])
+
+prompt = chat_template.invoke({
+    'domain': 'cricket',
+    'topic': 'Doosra',
+})
+
+print(prompt)
+```
+
+Output: `SystemMessage("You are a helpful cricket expert")` aur `HumanMessage("Explain in simple terms, what is Doosra")`.
+
+- Har message ek **tuple** hai: `(role, message)`
+- Role strings: `'system'`, `'human'`, `'ai'`
+
+### 7.2 Video ne ek "weird behaviour" dikhaya
+
+Agar tum yahan `SystemMessage(content='... {domain} ...')` jaise **message objects** daalte ho, to placeholders **bharte hi nahi**. Output mein `{domain}` jaisa ka waisa likha aata hai.
+
+```python
+# Ye galat tareeka hai (placeholder fill nahi hoga)
+ChatPromptTemplate([
+    SystemMessage(content='You are a helpful {domain} expert'),
+    HumanMessage(content='Explain in simple terms, what is {topic}'),
+])
+```
+
+> **⚠️ Correction:** Video mein ise "library abhi mature nahi hai, weird behaviour" kaha gaya. Asli wajah ye hai: `SystemMessage(...)` / `HumanMessage(...)` pehle se bane **static messages** hain (template nahi). Isliye unme `{}` format nahi hota. Template-style messages ke liye tuple `('system', '...')` use karo, ya `SystemMessagePromptTemplate` / `HumanMessagePromptTemplate`.
+
+**Real-life example:** Ek **chhapa hua card** (static message) vs ek **khali blank card** (template). Chhapa hua card par tum blanks nahi bhar sakte.
+
+### 7.3 Doosra syntax (aur kaunsa use karein)
+
+```python
+chat_template = ChatPromptTemplate.from_messages([
+    ('system', 'You are a helpful {domain} expert'),
+    ('human', 'Explain in simple terms, what is {topic}'),
+])
+```
+
+Dono ka output same hai. Video ka recommendation: jo **latest docs** mein diya hai wo use karo.
+
+> **Extra:** `from_messages(...)` aaj bhi sabse common aur safe tareeka hai. Docs mein ye har jagah dikhta hai.
+
+### 7.4 `PromptTemplate` vs `ChatPromptTemplate`
+
+| | `PromptTemplate` | `ChatPromptTemplate` |
 |---|---|---|
-| `embed_query(text)` | 1 string | 1 vector (1D list) |
-| `embed_documents(list_of_texts)` | List of strings | List of vectors (2D list) |
-
-> **Extra:** `embed_query` search query ke liye aur `embed_documents` stored documents ke liye use karte hain. RAG mein yahi dono pattern chalta hai.
-
-### 11.3 Open-source embeddings (local HuggingFace)
-
-Model: **`sentence-transformers/all-MiniLM-L6-v2`**
-
-- Sentences/paragraphs ko **384-dimensional dense vector** mein map karta hai.
-- Use: **clustering** aur **semantic search**.
-- Size ~**90 MB** (chhota), isliye API ke bajaye **local download** better.
-
-```python
-from langchain_huggingface import HuggingFaceEmbeddings
-
-embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-
-text = "Delhi is the capital of India"
-vector = embedding.embed_query(text)
-print(str(vector))        # 384-dim vector
-```
-
-Multiple documents ke liye:
-
-```python
-documents = [
-    "Delhi is the capital of India",
-    "Kolkata is the capital of West Bengal",
-    "Paris is the capital of France",
-]
-vectors = embedding.embed_documents(documents)
-print(str(vectors))       # 3 x 384 (2D list)
-```
-
-- Pehli baar run par model + tokenizer **download** hota hai; dusri baar **cache** se.
-
-> **Extra:** Is model ko chalane ke liye `sentence-transformers` package chahiye hota hai.
-
-### 11.4 OpenAI vs Open-source embeddings (speaker ka experience)
-
-| | OpenAI Embeddings | Free / open-source |
-|---|---|---|
-| Cost | **Bahut kam** (per 1M tokens), kyunki output sirf numbers | Free |
-| Quality | Speaker ke experience mein **better context** | Thoda kam accurate (speaker ke anusaar) |
-
-> **Extra (pricing):** Transcript mein exact price garbled hai. OpenAI ke pricing page par `text-embedding-3-small/large` ka current rate check kar lo.
-
-> **🔄 Update:** Ye speaker ka **personal experience** hai. Aajkal kai open-source embedding models (BGE, E5, GTE jaise) retrieval benchmarks (MTEB) par OpenAI ke kaafi kareeb ya kabhi better bhi hote hain. Production se pehle **apne data par test** karo.
+| Kab use karein | **Single-turn** message | **Multi-turn** (messages ki list) |
+| Output | Ek string prompt | Messages ki list (System, Human, AI) |
+| Kaam | Dynamic template banana | Dynamic template banana (multiple messages mein) |
 
 ---
 
-## 12. Mini Project: Document Similarity App
+## 8. MessagesPlaceholder
 
-### 12.1 Problem
+**Definition:** `ChatPromptTemplate` ke andar ek **special placeholder**, jahan runtime par **poori chat history (messages ki list)** insert hoti hai.
 
-- 5 documents hain (har ek ek cricketer ke baare mein).
-- User ek **query** puchta hai (e.g. *"Tell me about Virat Kohli"*).
-- Hume pata karna hai ki **kaunsa document query se sabse zyada related** hai.
+### 8.1 Problem (video ka example: customer support)
 
-### 12.2 Idea
+1. **Din 1:** Customer ne bola "I want to request a refund for my order 12345". Bot ne bola "Your refund request has been initiated, 3-5 business days".
+2. Chat khatam. Isko hum **database mein save** kar dete hain (video mein demo ke liye text file).
+3. **Din 3:** Customer wapas aaya aur bola **"Where is my refund?"**
 
-```mermaid
-flowchart LR
-    D["5 documents"] -->|embed_documents| DV["5 vectors"]
-    Q["User query"] -->|embed_query| QV["1 query vector"]
-    DV --> C["cosine_similarity"]
-    QV --> C
-    C --> S["5 scores"]
-    S --> T["highest score -> best document"]
-```
+Ab LLM ko kya pata kaun sa refund? Uske paas purani chat ka context nahi hai.
 
-- Sab documents ke vectors banao, query ka bhi vector banao (same dimension, speaker ne 300 rakha).
-- Query vector ka har document vector se **cosine similarity** (angle) nikalo.
-- **Jiska score sabse zyada → wahi answer.**
+**Solution:** Purani chat load karo aur template mein system message aur naye human message ke **beech** mein daal do.
 
-> **Extra:** Cosine similarity ki value -1 se 1 tak hoti hai; **1 ke jitni paas, utna similar**. (Text embeddings mein aam taur par positive range dikhti hai.)
+**Real-life example:** Customer support agent ke saamne us customer ki **purani case file** khuli hai. Customer "Where is my refund?" bolta hai to agent file dekh kar turant samajh jaata hai.
 
-### 12.3 Code
+### 8.2 Code (3 steps)
 
-> **Extra:** Video mein 5 documents ke exact strings transcript mein nahi aaye. Neeche sample documents hain (concept same hai).
+**Step 1: Chat template banao** (beech mein `MessagesPlaceholder`)
 
 ```python
-from langchain_openai import OpenAIEmbeddings
-from dotenv import load_dotenv
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-load_dotenv()
-
-embedding = OpenAIEmbeddings(model="text-embedding-3-large", dimensions=300)
-
-documents = [
-    "Virat Kohli is an Indian cricketer known for his aggressive batting and leadership.",
-    "MS Dhoni is a former Indian captain famous for his calm demeanor and finishing skills.",
-    "Sachin Tendulkar, the 'God of Cricket', holds many batting records.",
-    "Rohit Sharma is known for his elegant batting and record-breaking double centuries.",
-    "Jasprit Bumrah is an Indian fast bowler known for his unorthodox action and yorkers.",
-]
-
-query = "tell me about Bumrah"
-
-doc_embeddings = embedding.embed_documents(documents)   # 5 vectors
-query_embedding = embedding.embed_query(query)          # 1 vector
-
-# cosine_similarity ke dono arguments 2D list hone chahiye
-scores = cosine_similarity([query_embedding], doc_embeddings)[0]   # [0] -> 2D se simple list
-
-# Sort karne se positions bigad jaati hain, isliye pehle index attach karo
-index, score = sorted(list(enumerate(scores)), key=lambda x: x[1])[-1]
-
-print(query)
-print(documents[index])
-print("similarity score is:", score)
+chat_template = ChatPromptTemplate([
+    ('system', 'You are a helpful customer support agent'),
+    MessagesPlaceholder(variable_name='chat_history'),
+    ('human', '{query}'),
+])
 ```
 
-### 12.4 Step-by-step samjho
+**Step 2: Chat history load karo**
 
-| Step | Kya hota hai |
+```python
+chat_history = []
+with open('chat_history.txt') as f:
+    chat_history.extend(f.readlines())
+```
+
+**Step 3: Prompt banao**
+
+```python
+prompt = chat_template.invoke({
+    'chat_history': chat_history,
+    'query': 'Where is my refund',
+})
+print(prompt)
+```
+
+Output order: **System message → purani chat history → aaj ka Human message ("Where is my refund")**. Ab LLM ko poora context mil gaya.
+
+> **Extra:** `readlines()` se jo plain strings aati hain, wo by default **HumanMessage** ban jaati hain. AI ke purane replies ko sahi role dene ke liye history ko **role ke saath** save karo (JSON ya database mein `("human", "...")` aur `("ai", "...")` ke roop mein) aur wahi load karo.
+
+> **🔄 Update / Extra:**
+> - `MessagesPlaceholder("history", optional=True)` karne par agar history nahi di to error ki jagah **khali list** use hoti hai (pehli baar chat shuru hone par kaam aata hai).
+> - Shorthand syntax bhi chalta hai: `("placeholder", "{conversation}")` (ye optional placeholder banata hai).
+> - `MessagesPlaceholder("history", n_messages=1)` se sirf last N messages le sakte ho.
+> - Real apps mein chat history database mein jaati hai. LangGraph checkpointer ye kaam khud sambhal leta hai (`thread_id` ke hisaab se).
+
+---
+
+## 9. Poore video ka logical diagram
+
+`model.invoke(...)` ko 2 tareeke se use kar sakte ho:
+
+```text
+                    model.invoke(...)
+                           |
+        +------------------+------------------+
+        |                                     |
+  Single message                      List of messages
+  (single-turn, ek baar ka query)     (multi-turn conversation / chatbot)
+        |                                     |
+  +-----+------+                       +------+-------+
+  |            |                       |              |
+Static      Dynamic                  Static         Dynamic
+(seedha     (PromptTemplate)         (SystemMessage, (ChatPromptTemplate
+ string)                              HumanMessage,   + MessagesPlaceholder
+                                      AIMessage)      for chat history)
+```
+
+| Situation | Kya use karein |
 |---|---|
-| `embed_documents(documents)` | 5 documents → 5 vectors (2D list) |
-| `embed_query(query)` | Query → 1 vector |
-| `cosine_similarity([q], docs)` | Query vs har document ka similarity score. **Dono inputs 2D list** hone chahiye |
-| `[0]` | Result bhi 2D aata hai (1 x 5); `[0]` se simple list ban jati hai |
-| `enumerate(scores)` | Har score ke saath **index** attach: `(0, 0.66), (1, 0.34), ...` |
-| `sorted(..., key=lambda x: x[1])` | **Score** (doosre item) ke basis par ascending sort; index saath chalta rehta hai |
-| `[-1]` | Sabse bada score (last element) → `(index, score)` |
-| `documents[index]` | Best matching document |
+| Ek baar ka sawaal, fixed text | Seedha string |
+| Ek baar ka sawaal, blanks bharne hain | `PromptTemplate` |
+| Chatbot, fixed messages | `SystemMessage`, `HumanMessage`, `AIMessage` ki list |
+| Chatbot, messages mein blanks hain | `ChatPromptTemplate` |
+| Chatbot, purani chat history plug karni hai | `ChatPromptTemplate` + `MessagesPlaceholder` |
 
-**Speaker ke results:**
-
-- Query *"Tell me about Virat Kohli"* → Kohli wala document, score ≈ **0.66** (doosre document ke saath ≈ 0.34 vagairah).
-- Query *"Tell me about Bumrah"* → Bumrah wala document, with score.
-
-> **Extra (shortcut):** Sort ki jagah `np.argmax(scores)` se seedha best index mil jata hai:
->
-> ```python
-> index = int(np.argmax(scores))
-> score = scores[index]
-> ```
-
-### 12.5 Is app ki limitation → Vector Database
-
-- Humne documents ke embeddings **kahin store nahi kiye**. Har baar code run karne par embeddings phir se model se mangwane padte hain → **costly operation**.
-- **Solution:** document embeddings **ek baar generate karke store** karo. Isse store karne ke liye **Vector Database** chahiye (aage padhenge).
-- Phir jab **nayi query** aaye, bas us query ka embedding on-the-fly generate karo aur similarity nikalo. Is process ko **Retrieval** kehte hain.
-- Yahi pattern **RAG-based applications** mein use hota hai.
+**Aage kya aayega (Nitish ke plan):** Prompt Engineering ki alag playlist (Few-Shot, Chain of Thought, wagairah).
 
 ---
 
-## 13. Key Takeaways
+## 10. Key Takeaways (Quick Revision)
 
-1. **Models component** = alag-alag AI models se baat karne ka **common interface**; do types: **Language Models** aur **Embedding Models**.
-2. **Language Models:** text in → text out. **LLMs** (string in/out, old, support kam ho raha) vs **Chat Models** (messages in/out, roles, history, **recommended**).
-3. Chat models ka `invoke()` ek **AIMessage** deta hai → answer `result.content` mein, saath mein token **metadata**.
-4. **Same code pattern** OpenAI, Anthropic, Google ke liye: bas **class + API key + model name** badalte hain.
-5. API key ko **`.env`** mein rakho, `load_dotenv()` se load karo; variable ka **naam exact** hona chahiye; `.env` ko GitHub par push mat karo.
-6. **`temperature`**: 0 ki taraf = deterministic (code, math); high = creative (story, poem). Range provider-dependent (OpenAI-style **0–2**).
-7. **`max_completion_tokens`**: output length (aur cost) limit; parameter ka naam provider ke hisaab se badalta hai.
-8. **Open-source models:** free, full control, privacy, fine-tuning, deploy-anywhere. Cons: **hardware, setup complexity, kam refined (RLHF), limited multimodal**.
-9. HuggingFace par open models **2 tarike** se use: **Inference API** (server par) ya **Local** (`HuggingFacePipeline`, download).
-10. **Embedding models**: text → vector; `embed_query` (1 text) vs `embed_documents` (many texts, 2D list).
-11. **Semantic search** = query embedding vs document embeddings ka **cosine similarity**; highest score = best match.
-12. Embeddings baar-baar generate karna costly hai → **Vector Database** mein store karo (RAG ka base).
-
----
-
-## 14. Self-Test Questions
-
-> Pehle khud answer karo, phir answer expand karke check karo.
-
-**Q1.** LangChain ka Model component kis problem ko solve karta hai?
-<details><summary>Answer</summary>Alag-alag providers ke AI models alag tarah behave karte hain; Model component ek <b>uniform interface</b> deta hai taaki code almost same rahe aur provider badalna easy ho.</details>
-
-**Q2.** LangChain mein kaun se 2 types ke models hote hain, aur dono ka input/output kya hai?
-<details><summary>Answer</summary><b>Language Models</b> (text → text) aur <b>Embedding Models</b> (text → vector of numbers).</details>
-
-**Q3.** LLM aur Chat Model mein 4 differences batao.
-<details><summary>Answer</summary>Purpose (free-form generation vs multi-turn conversation), training (general corpora vs chat-fine-tuned), memory/history (nahi vs haan), role awareness (nahi vs system/user/assistant). Input/output: string vs messages.</details>
-
-**Q4.** LangChain ke code mein LLM aur Chat Model kis base class se inherit karte hain?
-<details><summary>Answer</summary>LLMs → <code>BaseLLM</code>; Chat models → <code>BaseChatModel</code>.</details>
-
-**Q5.** `llm.invoke(...)` aur `chat_model.invoke(...)` ke return type mein kya fark hai? Sirf answer kaise nikaloge?
-<details><summary>Answer</summary>LLM plain string deta hai; chat model <b>AIMessage</b> object deta hai. Answer: <code>result.content</code>.</details>
-
-**Q6.** `.env` file mein variable ka naam random kyun nahi rakh sakte?
-<details><summary>Answer</summary>LangChain integrations specific names (e.g. <code>OPENAI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code>) dhundhte hain; naam badla to key locate nahi hogi.</details>
-
-**Q7.** Temperature kya control karta hai? Code generation aur story writing ke liye kaisi value rakhoge?
-<details><summary>Answer</summary>Output ki randomness/creativity. Code → <b>0–0.3</b>; story/poem/jokes → <b>~1+</b> (high). Range provider ke hisaab se (OpenAI-style 0–2, Claude 0–1).</details>
-
-**Q8.** `max_completion_tokens` kyun use karte hain, aur chhota rakhne par kya hota hai?
-<details><summary>Answer</summary>Output length aur cost limit karne ke liye. Chhota rakhne par response beech mein <b>truncate</b> ho jata hai (finish_reason: length).</details>
-
-**Q9.** Open-source models ke 3 advantages aur 3 disadvantages batao.
-<details><summary>Answer</summary><b>Pros:</b> free (no API cost), full control + fine-tuning, data privacy (local), deploy anywhere. <b>Cons:</b> high hardware needs, setup complexity, less RLHF refinement, limited multimodal.</details>
-
-**Q10.** HuggingFace ke open-source model ko LangChain mein use karne ke 2 tarike aur dono ke classes?
-<details><summary>Answer</summary>1) <b>Inference API</b> → <code>HuggingFaceEndpoint</code> (+ <code>ChatHuggingFace</code>); 2) <b>Local</b> → <code>HuggingFacePipeline.from_model_id</code> (+ <code>ChatHuggingFace</code>).</details>
-
-**Q11.** `embed_query` aur `embed_documents` mein kya fark hai?
-<details><summary>Answer</summary><code>embed_query</code>: 1 text → 1 vector. <code>embed_documents</code>: list of texts → list of vectors (2D list).</details>
-
-**Q12.** Embedding dimensions kam karne se asli fayda kya hota hai (OpenAI embeddings mein)?
-<details><summary>Answer</summary>Storage kam aur search faster; API cost per-token hoti hai, dimension se nahi badalti. Par kam dimension = kam context capture.</details>
-
-**Q13.** Document similarity app mein `cosine_similarity` ke inputs 2D list kyun hone chahiye? Output 2D aaye to kya karoge?
-<details><summary>Answer</summary>Function arrays of vectors expect karta hai: <code>cosine_similarity([query_vec], doc_vecs)</code>. Output 1 x N hota hai, to <code>[0]</code> se simple list lo.</details>
-
-**Q14.** Sort karne se document ki position kyun bigad sakti hai, aur kaise bachaoge?
-<details><summary>Answer</summary>Sort order badal deta hai, original index kho jata hai. <code>enumerate(scores)</code> se pehle index attach karo, phir score (<code>x[1]</code>) par sort karo.</details>
-
-**Q15.** Document embeddings baar-baar generate karna kyun bura hai, aur solution kya hai?
-<details><summary>Answer</summary>Har baar model call = cost/time. Solution: ek baar generate karke <b>Vector Database</b> mein store karo; query aane par sirf query embedding nikalo (retrieval).</details>
+1. **Prompt** = LLM ko bheja gaya message (text ya multimodal).
+2. **Temperature 0** = (lagbhag) same output, **high temperature** = creative aur har baar alag output.
+3. **Static prompt** mein user poora prompt likhta hai, isme hallucination aur inconsistency ka risk hai.
+4. **Dynamic prompt** = template + user se sirf blanks ki values (dropdown), isse consistent experience milta hai.
+5. **`PromptTemplate`** single-turn dynamic prompt ke liye hai, `template.invoke({...})` se fill hota hai.
+6. `PromptTemplate` f-string se behtar hai: **validation**, **reuse**, aur **chains ke saath integration**.
+7. `template | model` ek **chain** hai (ek hi `invoke`).
+8. **LLM stateless** hai, isliye chatbot ko poori **chat history** bhejni padti hai.
+9. Chat history mein sirf strings kaafi nahi, **roles chahiye**: `SystemMessage`, `HumanMessage`, `AIMessage`.
+10. **`ChatPromptTemplate`** multi-turn messages mein dynamic placeholders ke liye, use tuples `('system', '...')`.
+11. **`MessagesPlaceholder`** = purani chat history ko template ke andar plug karne ki jagah.
+12. 🔄 Ab memory ke liye **LangGraph checkpointer** use hota hai, aur `load_prompt` deprecated hai.
 
 ---
 
-**Next video:** Prompts (static vs dynamic prompts, PromptTemplate, etc.)
+## 11. Self-Test Questions
+
+1. Temperature `0` aur `1.5` par same input ka output kaisa hoga? Kab kaunsa use karoge?
+2. Prompt kya hota hai? Text-based aur multimodal prompt mein kya fark hai?
+3. Static prompt ki 2 badi problems batao, aur dynamic prompt unhe kaise solve karta hai?
+4. `PromptTemplate` ko f-string par kyun prefer karein? 3 reasons batao.
+5. `validate_template` kya check karta hai? Ek error wala example do.
+6. `template | model` kya banata hai aur isse code mein kya fayda hota hai?
+7. Simple chatbot ko "bigger number ko 10 se multiply karo" par galat jawab kyun mila? LLM ke baare mein kaunsi baat yaad rakhni chahiye?
+8. `SystemMessage`, `HumanMessage` aur `AIMessage` mein kya fark hai? Har ek ka real-life example do.
+9. `ChatPromptTemplate` mein `SystemMessage('... {domain} ...')` likhne par placeholder kyun fill nahi hota? Sahi tareeka kya hai?
+10. `MessagesPlaceholder` kab use karte hain? Customer support refund example se samjhao.
+
+---
+
+## Sources (🔄 Update ke liye)
+
+- [LangChain v1 migration guide](https://docs.langchain.com/oss/python/migrate/langchain-v1)
+- [MessagesPlaceholder reference](https://reference.langchain.com/python/langchain-core/prompts/chat/MessagesPlaceholder)
+- [ChatPromptTemplate reference](https://reference.langchain.com/python/langchain-core/prompts/chat/ChatPromptTemplate)
+- [Short-term memory (checkpointer)](https://docs.langchain.com/oss/python/langchain-short-term-memory)
+- [Migrating off ConversationBufferMemory](https://python.langchain.com/docs/versions/migrating_memory/conversation_buffer_memory)
+- [CVE-2026-34070 (`load_prompt` path traversal)](https://www.endorlabs.com/vulnerability/cve-2026-34070)
+- [GPT-5 temperature discussion (OpenAI community)](https://community.openai.com/t/gpt-5-models-temperature/1337957)
