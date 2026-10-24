@@ -1,4 +1,4 @@
-# Video 07 - LangChain Runnables part 1: Complete Revision Notes
+# Video 08 - LangChain Runnables part 1: Complete Revision Notes
 
 > **Source:** CampusX (Nitesh) – *Runnables in LangChain* (Part 1: Kyun aur Kaise)
 > **Prerequisite:** Chains wala video (Sequential, Parallel, Conditional)
