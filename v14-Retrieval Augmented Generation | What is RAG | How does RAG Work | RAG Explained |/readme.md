@@ -1,4 +1,4 @@
-# RAG (Retrieval-Augmented Generation): Complete Revision Notes
+# Video 14 - RAG (Retrieval-Augmented Generation): Complete Revision Notes
 
 > **Source:** CampusX (Nitesh) – *RAG* (Generative AI using LangChain) – **conceptual / theory video**
 > **Series position:** 4 components (Loaders, Splitters, Vector Stores, Retrievers) ke baad **RAG ka concept**. Next video: LangChain mein RAG system scratch se banana.
